@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A lightweight, responsive, and modern local web client for Ollama servers.">
+  <title>Local Ollama Server Web Client</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Toggle for Mobile -->
+    <button id="mobile-sidebar-toggle" class="mobile-toggle-btn" aria-label="Toggle settings sidebar">
+      <span class="icon-menu"></span>
+    </button>
+
+    <!-- Sidebar Settings Panel -->
+    <aside id="app-sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="app-logo">Ollama Client</h1>
+        <p class="app-subtitle">Local LLM Interface</p>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- Connection Status Card -->
+        <section class="config-card">
+          <h2 class="card-title">Server Connection</h2>
+          <div class="server-config">
+            <input type="text" id="server-url-input" class="text-input" value="http://127.0.0.1:11434" placeholder="Server URL">
+            <div class="server-status-row">
+              <span id="status-badge" class="status-badge status-offline">Disconnected</span>
+              <button id="reload-models-btn" class="icon-btn" title="Reload Models" aria-label="Reload Models">
+                <span class="icon-refresh"></span>
+              </button>
+            </div>
+            <div id="connection-error-tip" class="error-tip hidden">
+              Connection failed. <button id="open-cors-guide-link" class="text-btn-danger">View CORS & Setup Guide</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Model Configuration Card -->
+        <section class="config-card">
+          <h2 class="card-title">Model Selection</h2>
+          <div class="form-group">
+            <label for="model-select">Active Model</label>
+            <select id="model-select" class="select-input" disabled>
+              <option value="">No models loaded</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Run Options Card -->
+        <section class="config-card">
+          <h2 class="card-title">Execution Mode</h2>
+          <div class="toggle-group">
+            <label class="toggle-label">
+              <input type="radio" id="mode-stream" name="exec-mode" value="stream" checked>
+              <span class="toggle-button">Stream Response</span>
+            </label>
+            <label class="toggle-label">
+              <input type="radio" id="mode-full" name="exec-mode" value="full">
+              <span class="toggle-button">Full Answer</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Parameters Accordion -->
+        <details class="accordion-details" open>
+          <summary class="accordion-summary">
+            <span>Inference Settings</span>
+            <span class="accordion-arrow"></span>
+          </summary>
+          <div class="accordion-content">
+            <div class="form-group">
+              <label for="system-prompt-textarea">System Prompt <span class="tooltip-icon" data-tooltip="Defines background instructions or persona to guide the model's tone and behavior.">?</span></label>
+              <textarea id="system-prompt-textarea" class="textarea-input" placeholder="You are a helpful AI assistant..." rows="2"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <div class="slider-header">
+                <label for="temperature-slider">Temperature <span class="tooltip-icon" data-tooltip="Controls randomness: higher values make output more creative, lower values make it more deterministic.">?</span></label>
+                <span id="temperature-value" class="slider-display">0.7</span>
+              </div>
+              <input type="range" id="temperature-slider" min="0.0" max="2.0" step="0.1" value="0.7" class="slider-input">
+            </div>
+
+            <div class="form-group">
+              <div class="slider-header">
+                <label for="top-p-slider">Top P <span class="tooltip-icon" data-tooltip="Nucleus sampling: limits token selection to those summing to this probability. Lower values reduce variety.">?</span></label>
+                <span id="top-p-value" class="slider-display">0.9</span>
+              </div>
+              <input type="range" id="top-p-slider" min="0.0" max="1.0" step="0.05" value="0.9" class="slider-input">
+            </div>
+
+            <div class="form-group">
+              <div class="slider-header">
+                <label for="top-k-slider">Top K <span class="tooltip-icon" data-tooltip="Limits candidate selection to the top K most probable tokens. Lower values focus output.">?</span></label>
+                <span id="top-k-value" class="slider-display">40</span>
+              </div>
+              <input type="range" id="top-k-slider" min="1" max="100" step="1" value="40" class="slider-input">
+            </div>
+
+            <div class="form-group">
+              <label for="max-tokens-input">Max Tokens (Num Predict) <span class="tooltip-icon" data-tooltip="Sets the maximum number of tokens to generate. Set to -1 for unlimited generation.">?</span></label>
+              <input type="number" id="max-tokens-input" class="text-input" placeholder="e.g. 2048" value="2048" min="-1">
+            </div>
+          </div>
+        </details>
+
+        <!-- History Card -->
+        <section class="config-card history-card">
+          <div class="history-header">
+            <h2 class="card-title">Chat History</h2>
+            <button id="clear-history-btn" class="text-btn-danger">Clear</button>
+          </div>
+          <div id="history-list-container" class="history-list">
+            <!-- Dynamically populated past queries -->
+            <p class="empty-history-text">No saved conversations</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="sidebar-footer">
+        <button id="show-cors-dialog-btn" class="footer-link">Connection & CORS Guide</button>
+      </div>
+    </aside>
+
+    <!-- Overlay for closing sidebar on mobile -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Main Workspace Container -->
+    <main class="chat-container">
+      <!-- Top Metrics Dashboard -->
+      <header class="metrics-bar">
+        <div class="metric-item">
+          <span class="metric-label">TTFT:</span>
+          <span id="metrics-ttft" class="metric-value">0ms</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+          <span class="metric-label">Speed:</span>
+          <span id="metrics-tps" class="metric-value">0.0 t/s</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+          <span class="metric-label">Duration:</span>
+          <span id="metrics-duration" class="metric-value">0.0s</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+          <span class="metric-label">Tokens:</span>
+          <span id="metrics-tokens" class="metric-value">0</span>
+        </div>
+      </header>
+
+      <!-- Chat Viewport -->
+      <section id="chat-messages-container" class="chat-messages">
+        <!-- Empty State Welcome -->
+        <div id="chat-empty-state" class="empty-state">
+          <div class="welcome-box">
+            <div class="welcome-icon">⚡</div>
+            <h2 class="welcome-title">Welcome to Local Ollama Client</h2>
+            <p class="welcome-text">
+              Run open-source language models entirely on your local machine. 
+              Select a model, customize parameters, and start your prompt.
+            </p>
+            <div class="welcome-guides">
+              <div class="guide-item">
+                <strong>Local Hosting:</strong> Requires Ollama server running locally (usually port 11434).
+              </div>
+              <div class="guide-item">
+                <strong>CORS Ready:</strong> If connection fails, check the "Connection & CORS Guide" link in the bottom-left sidebar.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Input Bar Container -->
+      <footer class="chat-input-wrapper">
+        <div class="input-form">
+          <textarea id="prompt-textarea" class="prompt-input" placeholder="Type your prompt here... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+          <div class="input-actions">
+            <button id="stop-btn" class="action-btn stop-btn hidden" aria-label="Stop Generation">
+              <span class="icon-stop"></span> Stop
+            </button>
+            <button id="send-btn" class="action-btn send-btn" aria-label="Send Prompt" disabled>
+              <span class="icon-send"></span> Send
+            </button>
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Native HTML dialog for CORS and Connection Troubleshooting -->
+  <dialog id="cors-dialog" class="troubleshoot-dialog">
+    <div class="dialog-card">
+      <header class="dialog-header">
+        <h2>Ollama Connection & CORS Guide</h2>
+        <button id="close-cors-dialog-btn" class="close-dialog-btn" aria-label="Close Guide">&times;</button>
+      </header>
+      <div class="dialog-body">
+        <p>By default, web browsers prevent web pages from making cross-origin HTTP requests due to security rules (CORS). Since this frontend runs in your browser, it needs permission to talk to your local Ollama server.</p>
+        
+        <h3>1. Ensure Ollama is Running</h3>
+        <p>Confirm that Ollama is active on your machine by opening <a href="http://localhost:11434" target="_blank" rel="noopener noreferrer">http://localhost:11434</a> in a new browser tab. You should see <em>"Ollama is running"</em>.</p>
+
+        <h3>2. Configure CORS (Cross-Origin Resource Sharing)</h3>
+        <p>If the server is running but you cannot connect or load models, you need to enable CORS access for Ollama by setting the <code>OLLAMA_ORIGINS</code> environment variable to <code>"*"</code>.</p>
+        
+        <div class="code-instructions">
+          <h4>On Linux / macOS (Terminal)</h4>
+          <p>Stop Ollama and restart it with the variable prepended:</p>
+          <pre><code>OLLAMA_ORIGINS="*" ollama serve</code></pre>
+
+          <h4>On Windows (Command Prompt / PowerShell)</h4>
+          <p>Close Ollama from the system tray completely. Then run:</p>
+          <pre><code>set OLLAMA_ORIGINS=*
+ollama serve</code></pre>
+          <p>Or add <code>OLLAMA_ORIGINS</code> with value <code>*</code> to your system environment variables and launch Ollama normally.</p>
+        </div>
+        
+        <h3>3. Verify the Endpoint</h3>
+        <p>If you run Ollama on a custom port or separate server, enter its address in the server URL field at the top of the settings sidebar (e.g., <code>http://192.168.1.100:11434</code>).</p>
+      </div>
+      <footer class="dialog-footer">
+        <button id="dialog-got-it-btn" class="action-btn dialog-action-btn">Got it</button>
+      </footer>
+    </div>
+  </dialog>
+  <script src="app.js" defer></script>
+</body>
+</html>
