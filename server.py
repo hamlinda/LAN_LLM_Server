@@ -4,6 +4,10 @@ import socketserver
 import urllib.request
 import urllib.error
 import sys
+import os
+import csv
+import json
+from datetime import datetime
 
 PORT = 8080
 BIND_ADDRESS = '0.0.0.0'
@@ -31,10 +35,69 @@ class ProxyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self):
-        if self.path.startswith('/api/'):
+        if self.path == '/api/log':
+            self.handle_log_request()
+        elif self.path.startswith('/api/'):
             self.proxy_request('POST')
         else:
             super().do_POST()
+
+    def handle_log_request(self):
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length) if content_length > 0 else b'{}'
+            data = json.loads(body.decode('utf-8'))
+            
+            model = data.get('model', '')
+            prompt = data.get('prompt', '')
+            settings = data.get('settings', {})
+            metrics = data.get('metrics', {})
+            
+            temp = settings.get('temperature', '')
+            top_p = settings.get('top_p', '')
+            top_k = settings.get('top_k', '')
+            max_tokens = settings.get('max_tokens', '')
+            
+            ttft = metrics.get('ttft', '')
+            speed = metrics.get('speed', '')
+            duration = metrics.get('duration', '')
+            tokens_sent = metrics.get('tokens_sent', '')
+            tokens_received = metrics.get('tokens_received', '')
+            
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            log_dir = '/home/dlh/dlhdev/ollama_local_server/logs'
+            log_file = os.path.join(log_dir, 'inference.log')
+            
+            os.makedirs(log_dir, exist_ok=True)
+            file_exists = os.path.isfile(log_file)
+            
+            with open(log_file, 'a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                if not file_exists or os.path.getsize(log_file) == 0:
+                    writer.writerow([
+                        'Timestamp', 'Model', 'Prompt', 'Temperature', 'Top_P', 'Top_K',
+                        'Max_Tokens', 'TTFT', 'Speed', 'Duration', 'Tokens_Sent', 'Tokens_Received'
+                    ])
+                writer.writerow([
+                    timestamp, model, prompt, temp, top_p, top_k,
+                    max_tokens, ttft, speed, duration, tokens_sent, tokens_received
+                ])
+                
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+            self.end_headers()
+            self.wfile.write(json.dumps({'status': 'success'}).encode('utf-8'))
+            
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({'status': 'error', 'message': str(e)}).encode('utf-8'))
 
     def proxy_request(self, method):
         target_url = f"{TARGET_OLLAMA}{self.path}"

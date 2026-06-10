@@ -26,7 +26,7 @@
 
       <div class="sidebar-content">
         <!-- Connection Status Card -->
-        <section class="config-card">
+        <section class="config-card hide-on-mobile">
           <h2 class="card-title">Server Connection</h2>
           <div class="server-config">
             <input type="text" id="server-url-input" class="text-input" value="http://127.0.0.1:11434" placeholder="Server URL">
@@ -137,6 +137,10 @@
     <main class="chat-container">
       <!-- Top Metrics Dashboard -->
       <header class="metrics-bar">
+        <button id="clear-chat-btn" class="clear-chat-btn">
+          <span class="icon-trash"></span>Clear Chat
+        </button>
+        <div class="metric-divider"></div>
         <div class="metric-item">
           <span class="metric-label">TTFT:</span>
           <span id="metrics-ttft" class="metric-value">0ms</span>
@@ -157,6 +161,38 @@
           <span id="metrics-tokens" class="metric-value">0</span>
         </div>
       </header>
+
+      <!-- Mobile Server Connection Banner -->
+      <div id="mobile-connection-banner" class="mobile-connection-banner">
+        <div class="mobile-connection-content">
+          <div class="mobile-connection-header">
+            <span class="error-dot"></span>
+            <strong>Connection Failed</strong>
+          </div>
+          <p class="mobile-connection-text">Cannot connect to Ollama. Enter your server URL below:</p>
+          <div class="mobile-input-row">
+            <input type="text" id="mobile-server-url-input" class="text-input" placeholder="e.g. http://10.0.0.192:11434">
+            <button id="mobile-reload-btn" class="icon-btn" title="Retry Connection" aria-label="Retry Connection">
+              <span class="icon-refresh"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Bar Container -->
+      <footer class="chat-input-wrapper">
+        <div class="input-form">
+          <textarea id="prompt-textarea" class="prompt-input" placeholder="Type your prompt here... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+          <div class="input-actions">
+            <button id="stop-btn" class="action-btn stop-btn hidden" aria-label="Stop Generation">
+              <span class="icon-stop"></span> Stop
+            </button>
+            <button id="send-btn" class="action-btn send-btn" aria-label="Send Prompt" disabled>
+              <span class="icon-send"></span> Send
+            </button>
+          </div>
+        </div>
+      </footer>
 
       <!-- Chat Viewport -->
       <section id="chat-messages-container" class="chat-messages">
@@ -181,20 +217,6 @@
         </div>
       </section>
 
-      <!-- Input Bar Container -->
-      <footer class="chat-input-wrapper">
-        <div class="input-form">
-          <textarea id="prompt-textarea" class="prompt-input" placeholder="Type your prompt here... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
-          <div class="input-actions">
-            <button id="stop-btn" class="action-btn stop-btn hidden" aria-label="Stop Generation">
-              <span class="icon-stop"></span> Stop
-            </button>
-            <button id="send-btn" class="action-btn send-btn" aria-label="Send Prompt" disabled>
-              <span class="icon-send"></span> Send
-            </button>
-          </div>
-        </div>
-      </footer>
     </main>
   </div>
 

@@ -1,0 +1,11 @@
+Timestamp,Model,Prompt,Temperature,Top_P,Top_K,Max_Tokens,TTFT,Speed,Duration,Tokens_Sent,Tokens_Received
+2026-06-05 16:40:14,deepseek-coder:latest,Test Prompt for Recursion,0.7,0.9,40,2048,450ms,15.4 t/s,2.1s,70,39
+2026-06-05 16:40:22,deepseek-coder:latest,"Line 1
+Line 2 with , comma and ""quotes""",0.7,,,,450ms,,,70,
+2026-06-06 08:38:46,deepseek-coder:latest,Write me a nasty note to ymca that tells them their camp isn't appropriate for my daughter. Speak in the style of a pirate on acid,0.7,0.9,40,2048,5385ms,16.8 t/s,7.73s,103,84
+2026-06-06 08:40:15,llama3:8b,Write me a nasty note to ymca that tells them their camp isn't appropriate for my daughter. Speak in the style of a pirate on acid,0.7,0.9,40,2048,7262ms,6.2 t/s,62.94s,40,378
+2026-06-06 10:32:28,gemma4:latest,tell me a story about how I can join the army via the smoke signal brigade,0.7,0.9,40,2048,107886ms,6.3 t/s,324.12s,32,1875
+2026-06-07 08:43:36,deepseek-coder:latest,tell me a story about two children who are out on an unexpected journey with a ring,0.7,0.9,40,-1,9095ms,21.3 t/s,8.12s,86,91
+2026-06-07 08:45:04,llama3.2:1b,tell me a story about two children who are out on an unexpected journey with a ring,0.7,0.9,40,-1,8561ms,16.1 t/s,63.81s,42,939
+2026-06-07 09:32:51,deepseek-coder:latest,"as a profficient python programmer, provide me with a script which scans all ports of the current system and then reports which ports are available via http accesses.  provide in a table format.  deliver high quality and valid comments describing functions, dependencies, outputs and actions.",0.7,0.9,40,2048,6497ms,12.4 t/s,133.56s,126,1609
+2026-06-09 11:06:28,gemma4:latest,provide a quick introduction note for linkedin communication to a hiring recruiter for a strategically prioritized application,0.7,0.9,40,2048,117235ms,5.5 t/s,292.13s,33,1448

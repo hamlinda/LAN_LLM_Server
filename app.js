@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const connectionErrorTip = document.getElementById('connection-error-tip');
   const openCorsGuideLink = document.getElementById('open-cors-guide-link');
   
+  const clearChatBtn = document.getElementById('clear-chat-btn');
   const metricsTtft = document.getElementById('metrics-ttft');
   const metricsTps = document.getElementById('metrics-tps');
   const metricsDuration = document.getElementById('metrics-duration');
@@ -45,6 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const corsDialog = document.getElementById('cors-dialog');
   const closeCorsDialogBtn = document.getElementById('close-cors-dialog-btn');
   const dialogGotItBtn = document.getElementById('dialog-got-it-btn');
+
+  const mobileConnectionBanner = document.getElementById('mobile-connection-banner');
+  const mobileServerUrlInput = document.getElementById('mobile-server-url-input');
+  const mobileReloadBtn = document.getElementById('mobile-reload-btn');
+
+  if (mobileServerUrlInput && serverUrlInput) {
+    mobileServerUrlInput.value = serverUrlInput.value;
+  }
 
   // --- App State Variables ---
   let abortController = null;
@@ -65,10 +74,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Server URL & Model Reload
     serverUrlInput.addEventListener('input', () => {
+      if (mobileServerUrlInput) {
+        mobileServerUrlInput.value = serverUrlInput.value;
+      }
       clearTimeout(connectionTimeout);
       connectionTimeout = setTimeout(debouncedServerCheck, 800);
     });
     reloadModelsBtn.addEventListener('click', checkServerConnection);
+
+    if (mobileServerUrlInput) {
+      mobileServerUrlInput.addEventListener('input', (e) => {
+        serverUrlInput.value = e.target.value;
+        clearTimeout(connectionTimeout);
+        connectionTimeout = setTimeout(debouncedServerCheck, 800);
+      });
+    }
+    if (mobileReloadBtn) {
+      mobileReloadBtn.addEventListener('click', checkServerConnection);
+    }
 
     // Param sliders visual values
     temperatureSlider.addEventListener('input', (e) => {
@@ -91,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     promptTextarea.addEventListener('input', autoResizeTextarea);
     stopBtn.addEventListener('click', handleAbort);
+    if (clearChatBtn) {
+      clearChatBtn.addEventListener('click', handleClearChat);
+    }
 
     // History cleaning
     clearHistoryBtn.addEventListener('click', clearHistory);
@@ -133,6 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function checkServerConnection() {
     let serverUrl = serverUrlInput.value.trim();
+    if (mobileServerUrlInput) {
+      mobileServerUrlInput.value = serverUrl;
+    }
     
     // Set loading state
     statusBadge.replaceChildren();
@@ -152,6 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
           statusBadge.className = 'status-badge status-online';
           statusBadge.textContent = 'Online (Proxy)';
           serverUrlInput.value = window.location.origin;
+          if (mobileServerUrlInput) {
+            mobileServerUrlInput.value = window.location.origin;
+          }
+          if (mobileConnectionBanner) {
+            mobileConnectionBanner.classList.remove('show-error');
+          }
           if (connectionErrorTip) {
             connectionErrorTip.classList.add('hidden');
           }
@@ -179,6 +214,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Connection success
       statusBadge.className = 'status-badge status-online';
       statusBadge.textContent = 'Online';
+      if (mobileConnectionBanner) {
+        mobileConnectionBanner.classList.remove('show-error');
+      }
       if (connectionErrorTip) {
         connectionErrorTip.classList.add('hidden');
       }
@@ -188,6 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Connection fail
       statusBadge.className = 'status-badge status-offline';
       statusBadge.textContent = 'Offline';
+      if (mobileConnectionBanner) {
+        mobileConnectionBanner.classList.add('show-error');
+      }
       if (connectionErrorTip) {
         connectionErrorTip.classList.remove('hidden');
       }
@@ -333,7 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Add user message bubble
-    appendMessageBubble('user', prompt);
+    const userBubble = appendMessageBubble('user', prompt);
+    addSaveButton(userBubble, prompt);
     
     // Clear prompt input & reset size
     promptTextarea.value = '';
@@ -380,6 +422,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let firstTokenTime = null;
     let accumulatedText = '';
     let tokenCount = 0;
+    let promptTokens = 0;
+    let responseTokens = 0;
     
     try {
       const response = await fetch(requestUrl, {
@@ -422,6 +466,13 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
               const parsed = JSON.parse(trimmedLine);
               
+              if (parsed.prompt_eval_count) {
+                promptTokens = parsed.prompt_eval_count;
+              }
+              if (parsed.eval_count) {
+                responseTokens = parsed.eval_count;
+              }
+
               if (!firstTokenTime) {
                 firstTokenTime = performance.now();
                 const ttftVal = Math.round(firstTokenTime - startTime);
@@ -495,10 +546,27 @@ document.addEventListener('DOMContentLoaded', () => {
           metricsTokens.textContent = 'N/A';
           metricsTps.textContent = 'N/A';
         }
+
+        promptTokens = resultData.prompt_eval_count || 0;
+        responseTokens = resultData.eval_count || 0;
       }
       
       // Save item to history
       saveToHistory(model, prompt, accumulatedText);
+
+      // Send inference logs to server
+      sendLogToServer(model, prompt, {
+        temperature,
+        top_p: topP,
+        top_k: topK,
+        max_tokens: isNaN(maxTokens) ? '' : maxTokens
+      }, {
+        ttft: metricsTtft.textContent,
+        speed: metricsTps.textContent,
+        duration: metricsDuration.textContent,
+        tokens_sent: promptTokens,
+        tokens_received: responseTokens
+      });
       
     } catch (error) {
       if (typingIndicator) typingIndicator.remove();
@@ -519,6 +587,9 @@ document.addEventListener('DOMContentLoaded', () => {
       abortController = null;
       stopBtn.classList.add('hidden');
       validateInputs();
+      if (assistantBubble && accumulatedText) {
+        addSaveButton(assistantBubble, accumulatedText);
+      }
       scrollToBottom();
     }
   }
@@ -528,6 +599,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (abortController) {
       abortController.abort();
     }
+  }
+
+  // --- Clear Current Chat View ---
+  function handleClearChat() {
+    handleAbort();
+    
+    chatMessagesContainer.replaceChildren();
+    
+    if (chatEmptyState) {
+      chatEmptyState.classList.remove('hidden');
+    }
+    
+    metricsTtft.textContent = '0ms';
+    metricsTps.textContent = '0.0 t/s';
+    metricsDuration.textContent = '0.0s';
+    metricsTokens.textContent = '0';
   }
 
   // --- DOM Helpers for Chat UI ---
@@ -637,8 +724,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Clear chat viewport and append the loaded message pair
     chatMessagesContainer.replaceChildren();
-    appendMessageBubble('user', item.prompt);
-    appendMessageBubble('assistant', item.response);
+    const userBubble = appendMessageBubble('user', item.prompt);
+    addSaveButton(userBubble, item.prompt);
+    
+    const assistantBubble = appendMessageBubble('assistant', item.response);
+    addSaveButton(assistantBubble, item.response);
     
     // Set matching model if available
     for (let i = 0; i < modelSelect.options.length; i++) {
@@ -656,5 +746,57 @@ document.addEventListener('DOMContentLoaded', () => {
     chatHistory = [];
     localStorage.removeItem('ollama_chat_history');
     renderHistoryList();
+  }
+
+  async function sendLogToServer(model, prompt, settings, metrics) {
+    try {
+      await fetch('/api/log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          prompt,
+          settings,
+          metrics
+        })
+      });
+    } catch (e) {
+      console.warn('Failed to send inference log to server:', e);
+    }
+  }
+
+  function addSaveButton(bubble, text) {
+    if (!text || text.trim() === '') return;
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'save-msg-btn';
+    saveBtn.title = 'Save message to text file';
+    
+    const icon = document.createElement('span');
+    icon.className = 'icon-save';
+    
+    saveBtn.appendChild(icon);
+    saveBtn.appendChild(document.createTextNode('Save'));
+    
+    saveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      downloadTextFile(text);
+    });
+    
+    bubble.appendChild(saveBtn);
+  }
+
+  function downloadTextFile(text) {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-message-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 });
