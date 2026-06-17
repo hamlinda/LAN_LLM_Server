@@ -253,15 +253,22 @@ document.addEventListener('DOMContentLoaded', () => {
       modelSelect.appendChild(option);
       modelSelect.disabled = true;
     } else {
-      models.forEach(model => {
+      let defaultSelectedIndex = 0;
+      models.forEach((model, index) => {
         const option = document.createElement('option');
         option.value = model.name;
         // Format size: e.g. "llama3:latest (4.7 GB)"
         const sizeGB = model.size ? ` (${(model.size / (1024 * 1024 * 1024)).toFixed(1)} GB)` : '';
         option.textContent = `${model.name}${sizeGB}`;
         modelSelect.appendChild(option);
+        
+        // Pre-select llama3.2:1b as default if it exists
+        if (model.name === 'llama3.2:1b') {
+          defaultSelectedIndex = index;
+        }
       });
       modelSelect.disabled = false;
+      modelSelect.selectedIndex = defaultSelectedIndex;
     }
     
     validateInputs();
