@@ -15,7 +15,7 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 # Check if python3 server.py is already running generally
-EXISTING_PID=$(pgrep -f "python3.*server.py" | grep -v "$$" | head -n 1)
+EXISTING_PID=$(pgrep -f "python3.*ollama_local_server/server.py" | grep -v "$$" | head -n 1)
 if [ -n "$EXISTING_PID" ]; then
     echo "Ollama Local Server Web Client seems to be already running with PID: $EXISTING_PID"
     exit 0

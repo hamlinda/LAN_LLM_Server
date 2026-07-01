@@ -30,7 +30,7 @@ if [ -f "$PID_FILE" ]; then
 else
     # Fallback: check if server.py is running
     echo "No server.pid file found. Checking for running server.py process..."
-    PID=$(pgrep -f "python3.*server.py" | grep -v "$$")
+    PID=$(pgrep -f "python3.*ollama_local_server/server.py" | grep -v "$$")
     if [ -n "$PID" ]; then
         echo "Found running process(es): $PID. Stopping..."
         kill -15 $PID 2>/dev/null
